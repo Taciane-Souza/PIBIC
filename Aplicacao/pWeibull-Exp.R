@@ -11,26 +11,22 @@ library(robustbase)
 library(maxLik) 
 library(moments)
 library(zipfR)
-library(zipfR)
+library(msm)
 #library(optimr)
 library(ucminf)
 library(optimx)
 library(survival)
 library(msm)
 
-### eta aqui = kappa no trabalho
-
-#### kappa aqui = eta no trabalho
 ### distribuição de base da Weibull
 
 #G=function(t,eta,kappa){
 #  return(pweibull(t,eta,kappa) )  
 #}
 
-g=function(t,e,k){ dweibull(t,k,(1/e)^(1/k) ) } # função densidade da weibull
+g=function(t,e,k){ dweibull(t,(1/e)^k,k) } # função densidade da weibull
 
-G=function(t,e,k){ pweibull(t,k,(1/e)^(1/k)) } # função acumulada da weibull
-
+G=function(t,e,k){ pweibull(t,(1/e)^k,k) } # função acumulada da weibull
 
 #g=function(t,eta,kappa){
 #  return(dweibull(t,eta,kappa) )  
@@ -117,8 +113,8 @@ estimates$par
 AIC = 2*estimates$value + 2*length(theta0)
 AIC
 
-eta     <- round(estimates$par[1],3);eta
-kappa     <- round(estimates$par[2],3);kappa
+eta     <- round(estimates$par[1],3);eta   # kappa
+kappa     <- round(estimates$par[2],3);kappa  #eta
 alpha    <- round(estimates$par[3],3);alpha
 beta     <- round(estimates$par[4:(3+px)],3);beta
 

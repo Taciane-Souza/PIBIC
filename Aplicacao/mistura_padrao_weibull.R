@@ -11,8 +11,8 @@ library(robustbase)
 library(maxLik) 
 library(moments)
 library(zipfR)
-library(zipfR)
-library(optimr)
+library(msm)
+#library(optimr)
 library(ucminf)
 library(optimx)
 library(survival)
@@ -60,6 +60,7 @@ log.lik.mix <- function(par,t,X,px,cens){
 
 
 #### application ####
+setwd("G:/My Drive/PIBIC-Taciane/Codigos/application")
 dados=read.table("dados_melanomaFOSP.txt",header = TRUE)
 time   <- dados$tempos
 cens <- dados$status
