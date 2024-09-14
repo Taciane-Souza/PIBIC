@@ -11,7 +11,7 @@ library(robustbase)
 library(maxLik) 
 library(moments)
 library(zipfR)
-library(zipfR)
+library(msm)
 #library(optimr)
 library(ucminf)
 library(optimx)
@@ -64,6 +64,7 @@ log.lik.pGexp <- function(par,t,X,px,cens){
 }
 
 #### application ####
+set.seed(123)
 dados=read.table("dados_melanomaFOSP.txt",header = TRUE)
 
 time   <- dados$tempo
@@ -88,8 +89,6 @@ estimates$par
 AIC = 2*estimates$value + 2*length(theta0)
 AIC
 
-BIC = 2*estimates$value + log(nrow(X))*length(theta0)
-BIC
 
 eta     <- round(estimates$par[1],3);eta
 kappa     <- round(estimates$par[2],3);kappa

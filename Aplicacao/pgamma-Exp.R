@@ -11,7 +11,7 @@ library(robustbase)
 library(maxLik) 
 library(moments)
 library(zipfR)
-library(zipfR)
+library(msm)
 #library(optimr)
 library(ucminf)
 library(optimx)
@@ -19,57 +19,55 @@ library(survival)
 
 ### distribuição de base da Gamma
 
+G=function(t,kappa){
+  return(pgamma(t, shape = kappa, scale = 1) )  
+}
+
+g=function(t,kappa){
+  return(dgamma(t, shape = kappa, scale = 1) )  
+}
+
 #G=function(t,eta,kappa){
-#  return(pgamma(t, scale = eta, shape = kappa) )  
+#  return(pgamma(t*eta, shape = kappa) )  
 #}
 
-#?pgamma
-#g=function(t,eta,kappa){
-#  return(dgamma(t,scale = eta, shape = kappa) )  
+#g=function(t, eta, kappa){
+#  return(dgamma(t*eta, shape = kappa)*eta )  
 #}
 
-G=function(t,eta,kappa){
-  return( gamma(kappa,t*eta)/gamma(kappa) )  
-}
 
-
-g=function(t,eta,kappa){
-  return((eta^kappa*t^(kappa-1)*exp((-t*eta)))/gamma(kappa)) 
-}
-
-
-S.pGexp <- function(t,alpha,eta,kappa,X,beta){
+S.pGexp <- function(t,alpha,kappa,X,beta){
   
   p0 <- as.vector(exp(X %*% beta)/(1+exp(X %*% beta)))
   
-  st <-  1-(1-p0)*(G(t,eta,kappa))^alpha
+  st <-  1-(1-p0)*(G(t,kappa))^alpha
   
   return(st)
 }
 
 
-h.pGexp=function(t,alpha,eta,kappa,X,beta){
+h.pGexp=function(t,alpha,kappa,X,beta){
   p0 <- as.vector(exp(X %*% beta)/(1+exp(X %*% beta)))
   
-  a=(1-p0)*alpha*g(t,eta,kappa)*(G(t,eta,kappa)^(alpha-1))
+  a=(1-p0)*alpha*g(t,kappa)*(G(t,kappa)^(alpha-1))
   
-  b=1-(1-p0)*(G(t,eta,kappa))^alpha
+  b=1-(1-p0)*(G(t,kappa))^alpha
   return(a/b)  
 }
 
 log.lik.pGexp <- function(par,t,X,px,cens){
-  eta  <- par[1]
-  kappa  <- par[2]
-  alpha  <- par[3]
-  nw     <- 3
+  kappa  <- par[1]
+  alpha  <- par[2]
+  nw     <- 2
   beta    <- par[(nw+1):(nw+px)]
   
-  loglik <- sum( cens*log(h.pGexp(t=t,alpha=alpha,eta=eta,kappa=kappa,X=X,beta=beta) ) + log(S.pGexp(t=t,alpha=alpha,eta=eta,kappa=kappa,X=X,beta=beta)) )
+  loglik <- sum( cens*log(h.pGexp(t=t,alpha=alpha,kappa=kappa,X=X,beta=beta) ) + log(S.pGexp(t=t,alpha=alpha,kappa=kappa,X=X,beta=beta)) )
   cat(-loglik,"\n")
   return(-loglik)
 }
 
 #### application ####
+set.seed(123)
 dados=read.table("dados_melanomaFOSP.txt",header = TRUE)
 time   <- dados$tempo
 cens <- dados$status
@@ -82,7 +80,7 @@ X6     <- ifelse(dados$idade>60,1,0) # ok
 X     <- model.matrix(~X1)  ## -1 --> sem beta0
 px     <- ncol(X) ## number of regression parameters         
 
-theta0=c(rep(.1,3),rep(-0.001,px)) ## initial values
+theta0=c(rep(.1,2),rep(-0.001,px)) ## initial values
 length(theta0)
 
 nrow(X)
@@ -96,26 +94,26 @@ AIC
 BIC = 2*estimates$value + log(nrow(X))*length(theta0)
 BIC
 
-eta     <- round(estimates$par[1],3);eta
-kappa     <- round(estimates$par[2],3);kappa
-alpha    <- round(estimates$par[3],3);alpha
-beta     <- round(estimates$par[4:(3+px)],3);beta
+#eta     <- round(estimates$par[1],3);eta
+kappa     <- round(estimates$par[1],3);kappa
+alpha    <- round(estimates$par[2],3);alpha
+beta     <- round(estimates$par[3:(2+px)],3);beta
 
 # ### desvios padr?es estimados
 estimates$hessian
 
-sd.eta<-sqrt(solve(estimates$hessian)[1,1]);round(sd.eta,3)
-sd.kappa<-sqrt(solve(estimates$hessian)[2,2]);round(sd.kappa,3)
-sd.alpha<-sqrt(solve(estimates$hessian)[3,3]);round(sd.alpha,3)
-sd.beta0<-sqrt(solve(estimates$hessian)[4,4]);round(sd.beta0,3)
-sd.beta1<-sqrt(solve(estimates$hessian)[5,5]);round(sd.beta1,3)
+#sd.eta<-sqrt(solve(estimates$hessian)[1,1]);round(sd.eta,3)
+sd.kappa<-sqrt(solve(estimates$hessian)[1,1]);round(sd.kappa,3)
+sd.alpha<-sqrt(solve(estimates$hessian)[2,2]);round(sd.alpha,3)
+sd.beta0<-sqrt(solve(estimates$hessian)[3,3]);round(sd.beta0,3)
+sd.beta1<-sqrt(solve(estimates$hessian)[4,4]);round(sd.beta1,3)
 
 
 ### intervalos de confianca de 95%
 cc<-qnorm(0.975,0,1)
 
-ic.eta<-eta-c(1,-1)*cc*(sd.eta)
-round(ic.eta,3)
+#ic.eta<-eta-c(1,-1)*cc*(sd.eta)
+#round(ic.eta,3)
 
 
 ic.kappa<-kappa-c(1,-1)*cc*(sd.kappa)
@@ -138,7 +136,7 @@ round(ic.beta1,3)
 p0F=exp(beta[1]+beta[2])/(1+exp(beta[1]+beta[2]))
 p0F=round(p0F,3)
 p0F
-sd.p0F=deltamethod(~exp(x4+x5)/(1+exp(x4+x5)), estimates$par, cov = solve(estimates$hessian))
+sd.p0F=deltamethod(~exp(x3+x4)/(1+exp(x3+x4)), estimates$par, cov = solve(estimates$hessian))
 sd.p0F
 ic.p0F<-p0F-c(1,-1)*cc*(sd.p0F)
 round(ic.p0F,3)
@@ -147,7 +145,7 @@ round(ic.p0F,3)
 p0M=exp(beta[1])/(1+exp(beta[1]))
 p0M=round(p0M,3)
 p0M
-sd.p0M=deltamethod(~exp(x4)/(1+exp(x4)), estimates$par, cov=solve(estimates$hessian))
+sd.p0M=deltamethod(~exp(x3)/(1+exp(x3)), estimates$par, cov=solve(estimates$hessian))
 sd.p0M
 ic.p0M<-p0M-c(1,-1)*cc*(sd.p0M)
 round(ic.p0M,3)
@@ -160,8 +158,8 @@ time=dados$tempo
 status<-dados$status
 ekm<-survfit(Surv(time,status)~X1)
 time=sort(time)
-st.pGexp0<-S.pGexp(t=time,alpha=alpha,eta=eta,kappa=kappa,X=1,beta=beta[1])
-st.pGexp1<-S.pGexp(t=time,alpha=alpha,eta=eta,kappa=kappa,X=1,beta=beta[1]+beta[2])
+st.pGexp0<-S.pGexp(t=time,alpha=alpha,kappa=kappa,X=1,beta=beta[1])
+st.pGexp1<-S.pGexp(t=time,alpha=alpha,kappa=kappa,X=1,beta=beta[1]+beta[2])
 plot(ekm,xlab="Tempo (anos)",conf.int=F,ylab="Sobrevivência",pch=16,lwd=2,bty="l")
 lines(c(0,time),c(1,st.pGexp0),col=4,lwd=3.8)
 lines(c(0,time),c(1,st.pGexp1),col=2,lwd=3.8)
@@ -207,7 +205,7 @@ envelopeDS <- function(x){
 
 
 ## residuals plot 
-sobre=S.pGexp(t=dados$tempo,alpha=alpha,eta=eta,kappa=kappa,X=X,beta=beta)
+sobre=S.pGexp(t=dados$tempo,alpha=alpha,kappa=kappa,X=X,beta=beta)
 qr <- qnorm(dados$status*(1 - sobre) + (1-dados$status)*runif(length(time),1-sobre))
 envelopeDS(qr) 
 
